@@ -104,7 +104,10 @@ doc_df %>%
 map2(
   doc_df$url,
   doc_df$title,
-  ~ download.file(.x, .y)
+  ~ tryCatch(
+    download.file(.x, .y),
+    error = function(e) data.frame()
+  )
 )
 
 
