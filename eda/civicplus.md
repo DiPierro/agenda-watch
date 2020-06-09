@@ -157,6 +157,63 @@ long time, and I don’t have space to download all of the documents
 locally, `civicplus_short.R` is a demo version of the same script that
 runs on the first five URLs in the CivicPlus URL list.
 
+Here’s an .rds file of 2,220 .pdfs downloaded by `civicplus.R` on
+`Sys.Date()`
+
+``` r
+civicplus <- 
+  read_rds(here::here("data", "civicplus.rds")) %>% 
+  mutate(
+    state_province = str_to_upper(str_remove(str_remove(str_extract(url, "/\\w{2}-"), "/"), "-")),
+    body = str_to_title(str_remove(str_remove(str_extract(url, "-\\w+\\."), "-"), "\\.")),
+  )
+```
+
+Let’s see what these documents cover. Here are the states and provinces
+for which we have documents:
+
+``` r
+civicplus %>% 
+  count(state_province, sort = TRUE)
+```
+
+    ## # A tibble: 51 x 2
+    ##    state_province     n
+    ##    <chr>          <int>
+    ##  1 MA               403
+    ##  2 CA               161
+    ##  3 TX               139
+    ##  4 IL               103
+    ##  5 WI               100
+    ##  6 CT                86
+    ##  7 MO                77
+    ##  8 OH                75
+    ##  9 CO                67
+    ## 10 PA                61
+    ## # … with 41 more rows
+
+And here are the the bodies for which we have documents:
+
+``` r
+civicplus %>% 
+  count(state_province, body, sort = TRUE) 
+```
+
+    ## # A tibble: 898 x 3
+    ##    state_province body               n
+    ##    <chr>          <chr>          <int>
+    ##  1 MA             Brookline         18
+    ##  2 MA             Brookline2        18
+    ##  3 MA             Andover           17
+    ##  4 MA             Falmouth          17
+    ##  5 MA             Concord           16
+    ##  6 MA             Hingham           15
+    ##  7 MA             Nantucket         14
+    ##  8 MA             Whitman           14
+    ##  9 ID             Kootenaicounty    13
+    ## 10 MA             Mansfield         13
+    ## # … with 888 more rows
+
 # Next steps
 
   - Identify root URLs that are invalid and remove them from our list of

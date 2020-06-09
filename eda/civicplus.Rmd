@@ -123,6 +123,31 @@ download.file(documents$url[1], here::here("docs", "test.pdf"))
 
 This approach appears to be relatively easy to scale. The script `civicplus.R` loops through a list of candidate CivicPlus sites and downloads all of the documents available. Since this process takes a long time, and I don't have space to download all of the documents locally, `civicplus_short.R` is a demo version of the same script that runs on the first five URLs in the CivicPlus URL list.
 
+Here's an .rds file of 2,220 .pdfs downloaded by `civicplus.R` on `Sys.Date()`
+
+```{r}
+civicplus <- 
+  read_rds(here::here("data", "civicplus.rds")) %>% 
+  mutate(
+    state_province = str_to_upper(str_remove(str_remove(str_extract(url, "/\\w{2}-"), "/"), "-")),
+    body = str_to_title(str_remove(str_remove(str_extract(url, "-\\w+\\."), "-"), "\\.")),
+  )
+```
+
+Let's see what these documents cover. Here are the states and provinces for which we have documents:
+
+```{r}
+civicplus %>% 
+  count(state_province, sort = TRUE)
+```
+
+And here are the the bodies for which we have documents:
+
+```{r}
+civicplus %>% 
+  count(state_province, body, sort = TRUE) 
+```
+
 # Next steps
 
 * Identify root URLs that are invalid and remove them from our list of master URLs.
