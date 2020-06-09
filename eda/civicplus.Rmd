@@ -95,6 +95,7 @@ documents <-
   ) %>% 
   # Drop all of the NA values -- the empty links
   drop_na(value) %>% 
+  unique() %>%
   # Use these filters to remove previous versions of agendas and minutes
   # and to filter out HTML versions of the same agendas and minutes
   filter(

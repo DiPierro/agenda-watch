@@ -1,7 +1,7 @@
 CivicPlus
 ================
 Amy DiPierro
-2020-06-07
+2020-06-09
 
   - [Introduction](#introduction)
   - [Scraping documents using rvest](#scraping-documents-using-rvest)
@@ -12,6 +12,7 @@ Amy DiPierro
 # Libraries
 library(tidyverse)
 library(rvest)
+library(lubridate)
 ```
 
 # Introduction
@@ -52,14 +53,35 @@ I start by providing three example URLs. You can test each by changing
 which one is uncommented.
 
 ``` r
-url_data <- "http://va-newportnews.civicplus.com/AgendaCenter"
-url_root <- "http://va-newportnews.civicplus.com"
+#url_data <- "http://va-newportnews.civicplus.com/AgendaCenter"
+#url_root <- "http://va-newportnews.civicplus.com"
 
-#url_data <- "https://www.portofgalveston.com/AgendaCenter"
-#url_root <- "https://www.portofgalveston.com"
+url_data <- "https://www.portofgalveston.com/AgendaCenter"
+url_root <- "https://www.portofgalveston.com"
 
 #url_data <-"http://ga-savannah.civicplus.com/AgendaCenter"
 #url_root <- "http://ga-savannah.civicplus.com"
+```
+
+We need to be able to scrape only the documents that apply after a
+certain date. The format of dates in CivicPlus is mmddyyyy. We can use
+this to our advantage.
+
+``` r
+date_vector <-
+  # Creates a vector of dates in the next week.
+  seq(Sys.Date(), Sys.Date() + ddays(7), by = "1 day") %>%  
+  # Rearranges the order of the date
+  map_chr(
+    ~ str_remove_all(
+        str_c(
+          str_extract(., "-[:digit:]{2}-"), # Extracts the month
+          str_extract(., "-[:digit:]{2}$"), # Extracts the day
+          str_extract(., "[:digit:]{4}") # Extractes the year
+        ),
+        "-" # Removes dashes
+    )
+  )
 ```
 
 Here I scrape all of the links to agendas and minutes contained on the
@@ -82,15 +104,23 @@ documents <-
     # Construct the urls so that we can download each document
     url = str_c(url_root, value),
     # Fill in blank links with NA
-    value = na_if(value, "")
+    value = na_if(value, ""),
+    # Make a date column
+    date = str_remove(str_extract(value, "_[:digit:]{8}"), "_")
   ) %>% 
   # Drop all of the NA values -- the empty links
   drop_na(value) %>% 
+  unique() %>%
   # Use these filters to remove previous versions of agendas and minutes
   # and to filter out HTML versions of the same agendas and minutes
   filter(
+    # Throw out some bogus values
     str_detect(value, "true", negate = TRUE),
-    str_detect(value, "Previous", negate = TRUE)
+    str_detect(value, "Previous", negate = TRUE),
+    str_detect(value, "http://", negate = TRUE),
+    str_detect(value, "www.", negate = TRUE),
+    # Only keep documents dated in the future
+    date %in% date_vector
   )
 ```
 
@@ -101,20 +131,10 @@ documents <-
 documents
 ```
 
-    ## # A tibble: 45 x 2
-    ##    value                         url                                            
-    ##    <chr>                         <chr>                                          
-    ##  1 /AgendaCenter/ViewFile/Agend… http://va-newportnews.civicplus.com/AgendaCent…
-    ##  2 /AgendaCenter/ViewFile/Agend… http://va-newportnews.civicplus.com/AgendaCent…
-    ##  3 /AgendaCenter/ViewFile/Agend… http://va-newportnews.civicplus.com/AgendaCent…
-    ##  4 /AgendaCenter/ViewFile/Agend… http://va-newportnews.civicplus.com/AgendaCent…
-    ##  5 /AgendaCenter/ViewFile/Agend… http://va-newportnews.civicplus.com/AgendaCent…
-    ##  6 /AgendaCenter/ViewFile/Agend… http://va-newportnews.civicplus.com/AgendaCent…
-    ##  7 /AgendaCenter/ViewFile/Minut… http://va-newportnews.civicplus.com/AgendaCent…
-    ##  8 /AgendaCenter/ViewFile/Agend… http://va-newportnews.civicplus.com/AgendaCent…
-    ##  9 /AgendaCenter/ViewFile/Minut… http://va-newportnews.civicplus.com/AgendaCent…
-    ## 10 /AgendaCenter/ViewFile/Agend… http://va-newportnews.civicplus.com/AgendaCent…
-    ## # … with 35 more rows
+    ## # A tibble: 1 x 3
+    ##   value                       url                                         date  
+    ##   <chr>                       <chr>                                       <chr> 
+    ## 1 /AgendaCenter/ViewFile/Age… https://www.portofgalveston.com/AgendaCent… 06112…
 
 Note that this process will only identify the URLs of documents listed
 on the first page of results. For our purposes, this should be fine,
@@ -132,13 +152,18 @@ download.file(documents$url[1], here::here("docs", "test.pdf"))
 
 This approach appears to be relatively easy to scale. The script
 `civicplus.R` loops through a list of candidate CivicPlus sites and
-downloads all of the documents available.
+downloads all of the documents available. Since this process takes a
+long time, and I don’t have space to download all of the documents
+locally, `civicplus_short.R` is a demo version of the same script that
+runs on the first five URLs in the CivicPlus URL list.
 
 # Next steps
 
-  - Adapt this workflow going forward so that we download new documents
-    that do not already appear in our archive and ignore old documents
-    that we’ve already downloaded.
-
   - Identify root URLs that are invalid and remove them from our list of
     master URLs.
+  - Make a scraper for another CivicPlus product, CivicWeb. [This is an
+    example of a CivicWeb
+    website.](https://nngov.civicweb.net/Portal/MeetingTypeList.aspx).
+    It appears to me that CivicWeb is the latest version of meeting
+    software from CivicPlus, and replaces the AgendaCenter websites
+    scraped in this guide.
