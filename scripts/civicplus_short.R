@@ -16,7 +16,7 @@ file_out <- here::here("data", "test.rds")
 # Read in the URLs and clean them up
 cp_urls <-
   sheets_read(ss = sheet_id, sheet = "clean_list") %>%
-  head(5) %>%
+  head(10) %>%
   mutate(
     url = str_c("https://", url),
     doc_url = str_c(url, "/AgendaCenter")
@@ -64,6 +64,7 @@ get_doc_links <- function(doc_url, url, ...) {
           )
       ) %>%
       drop_na(value) %>%
+      unique() %>%
       filter(
         str_detect(value, "true", negate = TRUE),
         str_detect(value, "Previous", negate = TRUE),
@@ -92,5 +93,8 @@ doc_df %>%
 map2(
   doc_df$url,
   doc_df$title,
-  ~ download.file(.x, .y)
+  ~ tryCatch(
+      download.file(.x, .y),
+      error = function(e) data.frame()
+  )
 )

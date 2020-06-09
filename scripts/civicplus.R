@@ -75,6 +75,7 @@ get_doc_links <- function(doc_url, url, ...) {
           )
       ) %>%
       drop_na(value) %>%
+      unique() %>%
       filter(
         str_detect(value, "true", negate = TRUE),
         str_detect(value, "Previous", negate = TRUE),
